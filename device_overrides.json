@@ -1,0 +1,22 @@
+{
+  "3C:9C:0F:18:2D:4B": {
+    "name": "Manu's Laptop",
+    "icon": "laptop",
+    "notes": "Primary development workstation"
+  },
+  "A6:7B:3C:D2:9F:01": {
+    "name": "Android Phone",
+    "icon": "android",
+    "notes": "Personal mobile device"
+  },
+  "B4:E6:2D:7A:6C:92": {
+    "name": "iPhone",
+    "icon": "iphone",
+    "notes": "iOS device"
+  },
+  "00:1A:11:9B:C3:4D": {
+    "name": "Printer",
+    "icon": "printer",
+    "notes": "Network HP LaserJet"
+  }
+}
