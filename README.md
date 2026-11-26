@@ -1,6 +1,7 @@
 📡 Wi-Fi Network Radar (Kali Linux Edition)
 A futuristic tactical cyber HUD Wi-Fi network scanner designed for Kali Linux. Scans the wireless and local network for all connected devices, renders a real-time 60FPS rotating radar animation with glowing device blips, automatically assigns icons based on device type and hardware MAC vendor, and allows full user customization to rename devices and change icons.
-![Radar Mockup](web/screenshot_reference.png)
+<img width="1672" height="941" alt="Neon Wi‑Fi Network Radar Dashboard" src="https://github.com/user-attachments/assets/83736090-f42c-4510-9651-2e5bae862235" />
+
 ---
 ✨ Features
 🎯 Tactical Circular Radar Animation:
