@@ -96,6 +96,10 @@ fi
 
 # 5. Start Python Radar Backend Server
 cd "$SCRIPT_DIR"
+if [ ! -f "web/index.html" ] && [ ! -f "index.html" ]; then
+    echo -e "${YELLOW}[*] Web assets folder not found on disk.${RESET}"
+    echo -e "${CYAN}[*] wifi_radar.py will auto-unpack embedded frontend assets...${RESET}"
+fi
 echo -e "${CYAN}[*] Launching Wi-Fi Network Radar Server on port ${PORT}...${RESET}"
 python3 wifi_radar.py &
 RADAR_PID=$!
