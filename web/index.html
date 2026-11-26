@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wi-Fi Network Radar - Kali Linux</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="hud-container">
+    <!-- Top Header -->
+    <header class="hud-header">
+      <div class="header-left">
+        <h1 class="hud-title">Wi-Fi Network Radar</h1>
+        <div class="hud-subtitle">Network Scan – Connected Devices</div>
+      </div>
+
+      <div class="header-center">
+        <button id="btn-scan" class="hud-btn primary">
+          <svg class="btn-icon radar-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M12 2a10 10 0 0 1 10 10"></path>
+          </svg>
+          <span id="scan-text">SCAN NETWORK</span>
+        </button>
+
+        <button id="btn-autoscan" class="hud-btn toggle-btn active">
+          <span class="toggle-dot"></span>
+          <span>AUTO-SCAN (15s)</span>
+        </button>
+
+        <button id="btn-audio" class="hud-btn icon-btn" title="Toggle Sonar Audio Ping">
+          <svg id="audio-icon-on" class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          </svg>
+          <svg id="audio-icon-off" class="btn-icon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <line x1="23" y1="9" x2="17" y2="15"></line>
+            <line x1="17" y1="9" x2="23" y2="15"></line>
+          </svg>
+        </button>
+
+        <button id="btn-demo-toggle" class="hud-btn small-btn" title="Toggle between Live Kali Network and Demo Preview">
+          <span>DEMO / LIVE</span>
+        </button>
+      </div>
+
+      <div class="header-right">
+        <div class="network-badge">
+          <div class="wifi-info-main">
+            <svg class="wifi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+              <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+              <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+              <circle cx="12" cy="20" r="1" fill="currentColor"></circle>
+            </svg>
+            <span class="wifi-label">Wi-Fi: <span id="wifi-ssid">CyberNet_5G</span></span>
+          </div>
+          <div class="wifi-info-sub">
+            Interface: <span id="wifi-iface">wlan0</span> &nbsp;|&nbsp; <span id="wifi-subnet">192.168.1.0/24</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="hud-main">
+      <!-- Left: Circular Radar Section -->
+      <section class="radar-section">
+        <div class="radar-box">
+          <!-- Outer Compass Labels -->
+          <div class="compass-label compass-0">0°</div>
+          <div class="compass-label compass-45">45°</div>
+          <div class="compass-label compass-90">90°</div>
+          <div class="compass-label compass-135">135°</div>
+          <div class="compass-label compass-180">180°</div>
+          <div class="compass-label compass-225">225°</div>
+          <div class="compass-label compass-270">270°</div>
+          <div class="compass-label compass-315">315°</div>
+
+          <!-- HTML5 Canvas for Radar Beam & Rings -->
+          <canvas id="radar-canvas" width="620" height="620"></canvas>
+
+          <!-- Interactive Device Icons Layer on Radar -->
+          <div id="radar-devices-layer" class="radar-devices-layer"></div>
+
+          <!-- Center Wi-Fi Hub Symbol -->
+          <div class="radar-center-hub">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+              <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+              <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+              <circle cx="12" cy="20" r="1.5" fill="currentColor"></circle>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Radar Status Footer Bar -->
+        <div class="radar-footer-bar">
+          <div class="radar-status-indicator">
+            <span class="blip-dot"></span>
+            <span id="radar-status-text">RADAR SWEEP ACTIVE</span>
+          </div>
+          <div class="radar-telemetry">
+            <span>PING: <strong id="telemetry-ping">1ms</strong></span>
+            <span>FREQ: <strong>5.2 GHz</strong></span>
+            <span>BLIPS: <strong id="telemetry-count">5</strong></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right: Tables and Selected Device Details -->
+      <section class="details-section">
+        <!-- Top Box: Connected Devices Table -->
+        <div class="hud-card devices-table-card">
+          <div class="card-header">
+            <h2 class="card-title">Connected Devices (<span id="devices-count">5</span>)</h2>
+            <div class="card-tools">
+              <button id="btn-export-csv" class="mini-tool-btn" title="Export Devices as CSV">CSV</button>
+              <button id="btn-export-json" class="mini-tool-btn" title="Export Devices as JSON">JSON</button>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="hud-table" id="devices-table">
+              <thead>
+                <tr>
+                  <th style="width: 40px;">#</th>
+                  <th>Device Name</th>
+                  <th>IP Address</th>
+                  <th>MAC Address</th>
+                  <th>Vendor</th>
+                </tr>
+              </thead>
+              <tbody id="devices-tbody">
+                <!-- Rows injected dynamically via app.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Bottom Box: Selected Device Details Card -->
+        <div class="hud-card device-details-card">
+          <div class="card-header">
+            <h2 class="card-title">Device Details (Selected)</h2>
+            <button id="btn-edit-selected" class="hud-btn edit-action-btn" title="Change device name or icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                <path d="M12 20h9"></path>
+                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+              </svg>
+              <span>Edit Device</span>
+            </button>
+          </div>
+
+          <div class="device-details-body">
+            <!-- Big Device Icon in Neon Box -->
+            <div class="device-big-icon-frame" id="selected-icon-frame">
+              <div id="selected-big-icon-wrapper" class="big-icon-svg-wrapper">
+                <!-- Dynamic SVG Icon -->
+              </div>
+            </div>
+
+            <!-- Details Key-Value List -->
+            <div class="device-info-list">
+              <div class="info-row">
+                <span class="info-label">Device:</span>
+                <span class="info-val device-name-val" id="detail-name">Android Phone</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">IP Address:</span>
+                <span class="info-val code-font" id="detail-ip">192.168.1.14</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">MAC Address:</span>
+                <span class="info-val code-font" id="detail-mac">A6:7B:3C:D2:9F:01</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Vendor:</span>
+                <span class="info-val" id="detail-vendor">Samsung Electronics</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Status:</span>
+                <span class="info-val status-online" id="detail-status">
+                  <span class="status-pulse-dot"></span> Connected (Online)
+                </span>
+              </div>
+            </div>
+
+            <!-- OS / Brand Visual Logo Badge -->
+            <div class="device-brand-badge" id="selected-brand-badge">
+              <div id="brand-logo-svg" class="brand-logo-wrapper">
+                <!-- Injected brand logo (Android bugdroid, Apple, etc.) -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dedicated Deauthentication Testing Panel -->
+        <div class="hud-card deauth-card" id="deauth-testing-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <h2 class="card-title">
+                <svg class="title-icon icon-danger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                  <path d="M2 17l10 5 10-5"></path>
+                  <path d="M2 12l10 5 10-5"></path>
+                </svg>
+                Deauthentication Testing
+              </h2>
+              <span class="hud-badge sim-badge">SAFE SIMULATION</span>
+            </div>
+            <div class="testing-status-badge status-idle" id="deauth-status-badge">
+              <span class="status-dot"></span>
+              <span id="deauth-status-text">Status: Idle</span>
+            </div>
+          </div>
+
+          <div class="deauth-card-body">
+            <!-- Selected Device Target Summary Banner -->
+            <div class="target-device-banner" id="target-device-banner">
+              <div class="target-status-indicator">
+                <span class="target-indicator-dot"></span>
+                <span class="target-indicator-label">TARGET DEVICE</span>
+              </div>
+              <div class="target-details-grid">
+                <div class="target-item">
+                  <span class="target-lbl">Hostname:</span>
+                  <strong class="target-val" id="target-name">Android Phone</strong>
+                </div>
+                <div class="target-item">
+                  <span class="target-lbl">IP:</span>
+                  <span class="target-val code-font" id="target-ip">192.168.1.14</span>
+                </div>
+                <div class="target-item">
+                  <span class="target-lbl">MAC:</span>
+                  <span class="target-val code-font" id="target-mac">A6:7B:3C:D2:9F:01</span>
+                </div>
+                <div class="target-item">
+                  <span class="target-lbl">Vendor:</span>
+                  <span class="target-val" id="target-vendor">Samsung Electronics</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Duration Selector & Action Controls -->
+            <div class="deauth-controls-row">
+              <div class="duration-control-group">
+                <div class="duration-header-row">
+                  <label class="control-label">Test Duration:</label>
+                  <span class="duration-scroll-hint">Scroll to select duration</span>
+                </div>
+                <div class="duration-selector-wrapper">
+                  <div class="duration-chips-scroll" id="duration-chips">
+                    <button type="button" class="duration-chip active" data-seconds="10">10s</button>
+                    <button type="button" class="duration-chip" data-seconds="20">20s</button>
+                    <button type="button" class="duration-chip" data-seconds="30">30s</button>
+                    <button type="button" class="duration-chip" data-seconds="45">45s</button>
+                    <button type="button" class="duration-chip" data-seconds="60">1 min</button>
+                    <button type="button" class="duration-chip" data-seconds="120">2 min</button>
+                    <button type="button" class="duration-chip" data-seconds="300">5 min</button>
+                    <button type="button" class="duration-chip" data-seconds="600">10 min</button>
+                    <button type="button" class="duration-chip" data-seconds="900">15 min</button>
+                    <button type="button" class="duration-chip" data-seconds="1800">30 min</button>
+                  </div>
+                  <select id="duration-select-dropdown" class="hud-select duration-select-dropdown" aria-label="Select Test Duration">
+                    <option value="10" selected>10 seconds</option>
+                    <option value="20">20 seconds</option>
+                    <option value="30">30 seconds</option>
+                    <option value="45">45 seconds</option>
+                    <option value="60">1 minute</option>
+                    <option value="120">2 minutes</option>
+                    <option value="300">5 minutes</option>
+                    <option value="600">10 minutes</option>
+                    <option value="900">15 minutes</option>
+                    <option value="1800">30 minutes</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="deauth-btn-group">
+                <button id="btn-start-deauth" class="hud-btn danger-test-btn" title="Start Safe Deauthentication Simulation">
+                  <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                  </svg>
+                  <span>START TEST</span>
+                </button>
+                <button id="btn-stop-deauth" class="hud-btn stop-test-btn" disabled title="Stop Active Test Simulation">
+                  <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="5" y="5" width="14" height="14" rx="2"></rect>
+                  </svg>
+                  <span>STOP TEST</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Progress Indicator & Countdown Timer -->
+            <div class="deauth-progress-container" id="deauth-progress-box">
+              <div class="progress-header">
+                <div class="progress-telemetry-left">
+                  <span>PROGRESS: <strong id="telemetry-progress-pct">0%</strong></span>
+                  <span class="telemetry-divider">|</span>
+                  <span>SIMULATED FRAMES: <strong id="telemetry-frames">0</strong></span>
+                  <span class="telemetry-divider">|</span>
+                  <span>MGMT CODE: <span id="telemetry-reason">802.11 Code 7 (Class 3 STA)</span></span>
+                </div>
+                <div class="countdown-clock">
+                  <span class="clock-label">TIME REMAINING:</span>
+                  <span class="clock-digits" id="countdown-timer-display">00:10</span>
+                </div>
+              </div>
+
+              <div class="hud-progress-bar-wrapper">
+                <div class="hud-progress-bar-fill" id="deauth-progress-bar" style="width: 0%;"></div>
+              </div>
+
+              <div class="simulation-safe-notice">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <span>SAFE SIMULATION MODE: Generates UI diagnostic analytics only. No wireless packets or deauth frames are transmitted.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Defensive 802.11 Monitoring Section -->
+    <section class="hud-card defensive-monitor-card" id="defensive-monitoring-card">
+      <div class="card-header">
+        <div class="card-title-group">
+          <h2 class="card-title">
+            <svg class="title-icon icon-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            Defensive 802.11 Monitoring
+          </h2>
+          <span class="hud-badge defense-badge">DEAUTH &amp; DISASSOC IDS</span>
+        </div>
+
+        <div class="defensive-header-controls">
+          <div class="adapter-capability-pill checking" id="adapter-capability-pill">
+            <span class="cap-indicator cap-checking" id="cap-indicator"></span>
+            <span class="cap-text" id="cap-text">Checking monitor-mode capability…</span>
+          </div>
+          <button id="btn-toggle-monitoring" class="mini-tool-btn" title="Start or stop real passive capture of deauth/disassoc frames" disabled>
+            <span id="monitor-toggle-label">START MONITORING</span>
+          </button>
+          <button id="btn-clear-defensive-log" class="mini-tool-btn" title="Clear Event Log">CLEAR LOG</button>
+          <button id="btn-export-defensive-log" class="mini-tool-btn" title="Export Defensive Audit Log">EXPORT CSV</button>
+        </div>
+      </div>
+
+      <div class="monitor-reason-line hidden" id="monitor-reason-line"></div>
+
+      <div class="defensive-log-table-wrapper">
+        <table class="hud-table defensive-table" id="defensive-events-table">
+          <thead>
+            <tr>
+              <th style="width: 45px;">#</th>
+              <th style="width: 90px;">Time</th>
+              <th style="width: 130px;">Event Type</th>
+              <th>Source (BSSID / AP)</th>
+              <th>Target (Client MAC)</th>
+              <th>802.11 Reason Code</th>
+              <th style="width: 95px;">Signal</th>
+              <th style="width: 140px;">Defense / Status</th>
+            </tr>
+          </thead>
+          <tbody id="defensive-events-tbody">
+            <!-- Dynamically populated rows -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="defensive-footer-bar">
+        <div class="footer-stat">
+          <span>MONITORED FRAMES: <strong id="defensive-total-count">0</strong></span>
+        </div>
+        <div class="footer-stat">
+          <span>DEAUTH DETECTED: <strong id="defensive-deauth-count" style="color: var(--neon-red);">0</strong></span>
+        </div>
+        <div class="footer-stat">
+          <span>DISASSOC DETECTED: <strong id="defensive-disassoc-count" style="color: var(--neon-yellow);">0</strong></span>
+        </div>
+        <div class="footer-stat">
+          <span>802.11w PMF MITIGATED: <strong id="defensive-pmf-count" style="color: var(--neon-green);">0</strong></span>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Modal: Change Device Name and Icon -->
+  <div id="edit-modal" class="hud-modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Customize Device Identity</h3>
+        <button id="modal-close" class="modal-close-btn">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="modal-mac-preview">
+          Target MAC: <strong id="modal-target-mac" class="code-font">A6:7B:3C:D2:9F:01</strong>
+          &nbsp;|&nbsp; IP: <span id="modal-target-ip" class="code-font">192.168.1.14</span>
+        </div>
+
+        <div class="form-group">
+          <label for="input-device-name">Device Name / Alias:</label>
+          <input type="text" id="input-device-name" class="hud-input" placeholder="e.g. Manu's Laptop, Living Room TV, Work Phone">
+        </div>
+
+        <div class="form-group">
+          <label>Select Device Category & Icon:</label>
+          <div class="icon-selector-grid" id="icon-selector-grid">
+            <!-- Icon choices populated by app.js -->
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="input-device-notes">Custom Notes (Optional):</label>
+          <input type="text" id="input-device-notes" class="hud-input" placeholder="e.g. Trusted personal device, Static DHCP lease">
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="btn-modal-reset" class="hud-btn danger-btn">Reset to Auto</button>
+        <button id="btn-modal-cancel" class="hud-btn">Cancel</button>
+        <button id="btn-modal-save" class="hud-btn primary">Save Identity</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="hud-toast hidden"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
